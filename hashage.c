@@ -6,21 +6,18 @@
 #include "persistence.h"
 
 CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** error){
-    char functionName[] = "hashage.createHashMap";
+    char* functionName = "hashage.createHashMap";
     if (*error != NULL){
         createError(error,functionName,"Error not null",NULL,NULL);
         return NULL;
     }
 
-    char filename[256];
-    snprintf(filename, sizeof(filename), "%s.db", name);
-
-    FILE* fp = openHashMapFile(filename);
+    FILE* fp = readHashMapFile(name);
     if(fp == NULL){
         printf("No HashMap to import, creating it\n");
         HashMap* hashmap = malloc(sizeof(HashMap));
         CachedHashMap* cachedHashMap = malloc(sizeof(CachedHashMap));
-        Entry** data = malloc(sizeof(Entry*)*dataSize);
+        CachedEntry** data = malloc(sizeof(CachedEntry*)*dataSize);
 
         *cachedHashMap = (CachedHashMap){
             .hashMap = hashmap,
@@ -29,11 +26,11 @@ CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** e
         };
         *hashmap = (HashMap){
             .dataSize = dataSize,
-            .entrySize = sizeof(Entry),
+            .entrySize = sizeof(CachedEntry),
             .data = data
         };
         Error* hashMapCreationErrror = NULL;
-        createHashMapFile(filename,hashmap,&hashMapCreationErrror);
+        createHashMapFile(name,hashmap,&hashMapCreationErrror);
         if (hashMapCreationErrror != NULL){
             createError(error,functionName,"Error during the creation of the HashMap file",NULL,hashMapCreationErrror);
             return NULL;
@@ -45,13 +42,14 @@ CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** e
         CachedHashMap* cachedHashMap = malloc(sizeof(CachedHashMap));
 
         Error* hashMapImportError = NULL;
-        int* importedData = importHashMapFromFile(filename,&hashMapImportError);
+        int* importedData = importHashMapFromFile(name,&hashMapImportError);
         if(hashMapImportError != NULL){
             createError(error,functionName,"Error during the import of the HashMap from file",NULL,hashMapImportError);
+            fclose(fp);
             return NULL;
         }
 
-        Entry** data = malloc(sizeof(Entry*)*importedData[1]);
+        CachedEntry** data = malloc(sizeof(CachedEntry*)*importedData[1]);
          *cachedHashMap = (CachedHashMap){
             .hashMap = hashmap,
             .count = 0,
@@ -62,7 +60,37 @@ CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** e
             .entrySize = importedData[0],
             .data = data
         };
+        fclose(fp);
         return cachedHashMap;
     }
     return NULL;
+}
+
+void verifyEntryForInsert(Entry* entry,Error** error){
+    char* functionName = "hashage.verifyEntry";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return;
+    }
+    if(entry == NULL){
+        createError(error,functionName,"Entry must point to an address",NULL,NULL);
+        return;
+    }
+    if(entry->id == -1){
+        createError(error,functionName,"Entry id can't be null",NULL,NULL);
+        return;
+    }
+    if(entry->value == NULL){
+        createError(error,functionName,"Entry value can't be null",NULL,NULL);
+        return;
+    }
+    if(strcmp(entry->table,"") == 0){
+        createError(error,functionName,"Entry table can't be null",NULL,NULL);
+        return;
+    }
+    return;
+}
+
+void printEntry(Entry* entry){
+    printf("Table : %s\nKey : %d\nValue : %s\n",entry->table,entry->id,entry->value);
 }

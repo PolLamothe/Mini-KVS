@@ -5,7 +5,7 @@
 #include "hashage.h"
 #include "persistence.h"
 
-FILE* openHashMapFile(char* filename){
+FILE* readHashMapFile(char* filename){
     FILE* fp = fopen(filename, "rb");
     if(!fp){
         return NULL;
@@ -13,21 +13,29 @@ FILE* openHashMapFile(char* filename){
     return fp;
 }
 
+FILE* writeHashMapFile(char* filename){
+    FILE* fp = fopen(filename, "a");
+    if(!fp){
+        return NULL;
+    }
+    return fp;
+}
+
 void createHashMapFile(char* filename,HashMap* hashmap,Error** error){
-    char functionName[] = "hashage.createHashMap";
+    char* functionName = "persistence.createHashMapFile";
     if (*error != NULL){
         createError(error,functionName,"Error must be null",NULL,NULL);
         return;
     }
 
-    FILE* fp = openHashMapFile(filename);
+    FILE* fp = readHashMapFile(filename);
     if( fp != NULL){
         fclose(fp);
         createError(error,functionName,"File already exist",NULL,NULL);
         return;
     }
+    fp = writeHashMapFile(filename);
 
-    fp = fopen(filename, "wb");
     int entrySize = (int)hashmap->entrySize;
     fwrite(&entrySize,sizeof(int),1,fp);
     fwrite(&hashmap->dataSize,sizeof(int),1,fp);
@@ -36,12 +44,13 @@ void createHashMapFile(char* filename,HashMap* hashmap,Error** error){
 }
 
 int* importHashMapFromFile(char* filename,Error** error){
-    char functionName[] = "hashage.importHashMapFromFile";
+    char* functionName = "persistence.importHashMapFromFile";
     if (*error != NULL){
         createError(error,functionName,"Error must be null",NULL,NULL);
         return NULL;
     }
-    FILE* fp = openHashMapFile(filename);
+
+    FILE* fp = writeHashMapFile(filename);
     if( fp == NULL){
         createError(error,functionName,"Can't open HashMap file",NULL,NULL);
         return NULL;
@@ -57,4 +66,43 @@ int* importHashMapFromFile(char* filename,Error** error){
     }
     fclose(fp);
     return data;
+}
+
+void insertEntry(char* filename,Entry* entry,Error** error){
+    char* functionName = "persistence.insertEntry";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return;
+    }
+    FILE* fp = writeHashMapFile(filename);
+    if(fp == NULL){
+        createError(error,functionName,"File can't be null",NULL,NULL);
+        fclose(fp);
+        return;
+    }
+    Error* entryValidationError = NULL;
+    verifyEntryForInsert(entry,&entryValidationError);
+    if(entryValidationError != NULL){
+        createError(error,functionName,"Entry not valid",NULL,entryValidationError);
+        fclose(fp);
+        return;
+    }
+
+    char debug[255];
+    if(!fwrite(entry->table,strlen(entry->table),1,fp)){
+        createError(error,functionName,"Table name wasn't written",debug,NULL);
+        fclose(fp);
+        return;
+    };
+    if(!fwrite(&(entry->id),sizeof(int),1,fp)){
+        createError(error,functionName,"ID wasn't written",debug,NULL);
+        fclose(fp);
+        return;
+    }
+    if(!fwrite(entry->value,entry->valueSize,1,fp)){
+        createError(error,functionName,"Value wasn't written",debug,NULL);
+        fclose(fp);
+        return;
+    }
+    fclose(fp);
 }

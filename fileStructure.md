@@ -1,1 +1,1 @@
-|int entrySize|int dataSize| Entry** data |
+|int entrySize|int dataSize| Entry* data |
