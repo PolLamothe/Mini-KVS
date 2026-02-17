@@ -9,8 +9,8 @@ typedef struct Entry{
     int id;
     void* value;
     size_t valueSize;
-    struct Entry* next;
-    struct Entry* previous;
+    struct CachedEntry* next;
+    struct CachedEntry* previous;
 } Entry;
 
 typedef struct Table{
@@ -34,6 +34,8 @@ typedef struct CachedHashMap{
     int count;
     int capacity;
     HashMap* hashMap;
+    CachedEntry* firstCached;
+    CachedEntry* lastCached;
 }CachedHashMap;
 
 CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** error);
@@ -41,5 +43,11 @@ CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** e
 void verifyEntryForInsert(Entry* entry,Error** error);
 
 void printEntry(Entry* entry);
+
+void addEntryInCachedHashMap(CachedHashMap* hashmap,Entry* entry,Error** error);
+
+void removeCachedEntryFromCachedHashMap(CachedHashMap* cachedHashmap,CachedEntry* cachedEntry,Error** error);
+
+void removeEntryFromHashMap(HashMap* hashmap,Entry* entry,Error** error);
 
 #endif

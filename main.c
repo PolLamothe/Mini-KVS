@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "input.h"
 #include "persistence.h"
+#include "hashage.h"
 
 int main(){
     Error* error = NULL;
@@ -12,7 +13,7 @@ int main(){
     CachedHashMap* hashmap = createHashMap(name,dataSize,50,&error);
     if(error != NULL){
         printErrorStack(error);
-        return 1;
+        return -1;
     }
     printf("HashMap imported successfully !\n");
     if (hashmap->hashMap->dataSize != dataSize){
@@ -31,9 +32,25 @@ int main(){
         UserAction* userAction = getEntry(userInput,&userActionError);
         if(userActionError != NULL){
             printErrorStack(userActionError);
-            return 1;
+            return -1;
         }
-        printUserAction(userAction);
+        if(userAction->type == INSERT){
+            Error* insertionError = NULL;
+            insertEntry(name,userAction->entry,&insertionError);
+            if(insertionError != NULL){
+                printErrorStack(insertionError);
+                return -1;
+            }
+            Error* addEntryInCachedHashMapError = NULL;
+            addEntryInCachedHashMap(hashmap,userAction->entry,&addEntryInCachedHashMapError);
+            if(addEntryInCachedHashMapError != NULL){
+                printErrorStack(addEntryInCachedHashMapError);
+                return -1;
+            }
+
+            printEntry(userAction->entry);
+            printf("Insertion réussi !\n");
+        }
         free(userInput);
     }
     return 0;

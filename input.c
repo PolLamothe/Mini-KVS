@@ -29,12 +29,12 @@ UserAction* getEntry(char* input,Error** error){
         }
     }
     if(actionIndex == -1){
-        printf("%d\n",strlen(input));
+        printf("%d\n",(int)strlen(input));
         createError(error,functionName,"No delimiter found for action",NULL,NULL);
         return NULL;
     }
 
-    char* actionString[actionIndex-1];
+    char actionString[actionIndex-1];
     
     strncpy(actionString, input, actionIndex);
 
@@ -52,7 +52,7 @@ UserAction* getEntry(char* input,Error** error){
     int tableEndIndex = -1;
     for(int i = actionIndex;i<strlen(input);i++){
         if(tableStartIndex == -1){
-            if(input[i] != ' '){
+            if(input[i] != ':'){
                 tableStartIndex = i;
             }
         }else if(tableEndIndex == -1){
