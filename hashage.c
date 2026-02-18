@@ -5,8 +5,277 @@
 #include <string.h>
 #include "persistence.h"
 
-CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** error){
+
+Entry* createEntry(char* table,int id,void* value,EntryValueType valueType,CachedEntry* next,CachedEntry* previous,Error** error){
+    char* functionName = "hashage.createEntry";
+    if (*error != NULL){
+        createError(error,functionName,"Error not null",NULL,NULL);
+        return NULL;
+    }
+    if(table == NULL){
+        createError(error,functionName,"Table cannot be null",NULL,NULL);
+        return NULL;
+    }
+    if(value == NULL){
+        createError(error,functionName,"Value cannot be null",NULL,NULL);
+        return NULL;
+    }
+    char* tableHeap = malloc((strlen(table)+1)*sizeof(char));
+    if(tableHeap == NULL){
+        createError(error,functionName,"Error during the allocation of the table",NULL,NULL);
+        return NULL;
+    }
+    strcpy(tableHeap,table);
+    Entry* result = malloc(sizeof(Entry));
+    *result = (Entry){
+        .id = id,
+        .next = next,
+        .previous = previous,
+        .table = tableHeap,
+        .value = value,
+        .valueType = valueType
+    };
+    return result;
+}
+
+void freeEntry(Entry* entry, Error** error){
+    char* functionName = "hashage.freeEntry";
+    if (*error != NULL){
+        createError(error,functionName,"Error not null",NULL,NULL);
+        return;
+    }
+    if(entry == NULL){
+        createError(error,functionName,"Entry cannot be null",NULL,NULL);
+        return;
+    }
+    free(entry->table);
+    free(entry);
+}
+
+HashMap* createHashMap(int dataSize,Error** error){
     char* functionName = "hashage.createHashMap";
+    if (*error != NULL){
+        createError(error,functionName,"Error not null",NULL,NULL);
+        return NULL;
+    }
+    CachedEntry** data = calloc(dataSize,sizeof(CachedEntry*));
+
+    if(data == NULL){
+        createError(error,functionName,"Error during the allocation of data",NULL,NULL);
+        return NULL;
+    }
+
+    HashMap* result = malloc(sizeof(HashMap));
+
+    if(result == NULL){
+        createError(error,functionName,"Error during the allocation of Hashmap null",NULL,NULL);
+        return NULL;
+    }
+
+    *result = (HashMap){
+        .data = data,
+        .dataSize = dataSize
+    };
+    return result;
+}
+
+void freeCachedEntry(CachedEntry* cachedEntry,Error** error){
+    char* functionName = "hashage.freeCachedEntry";
+    if (*error != NULL){
+        createError(error,functionName,"Error not null",NULL,NULL);
+        return;
+    }
+    if(cachedEntry != NULL){
+        createError(error,functionName,"CachedEntry cannot be null",NULL,NULL);
+        return;
+    }
+    if(cachedEntry->next != NULL){
+        //We delete the linkage
+        cachedEntry->next->previous = NULL;
+    }
+    if(cachedEntry->previous != NULL){
+        cachedEntry->previous->next = NULL;
+    }
+
+    Error* deleteCachedEntryFromHashMapError = NULL;
+    deleteCachedEntryFromHashMap(cachedEntry,&deleteCachedEntryFromHashMapError);
+    if(deleteCachedEntryFromHashMapError != NULL){
+        createError(error,functionName,"Error during the suppression of the entry from the hashMap",NULL,deleteCachedEntryFromHashMapError);
+        return;
+    }
+
+    Error* deleteCachedEntryFromCachedHashMapError = NULL;
+    deleteCachedEntryFromCachedHashMap(cachedEntry,&deleteCachedEntryFromCachedHashMapError);
+    if(deleteCachedEntryFromCachedHashMapError != NULL){
+        createError(error,functionName,"Error during the suppression of the entry from the CachedHashMap",NULL,deleteCachedEntryFromHashMapError);
+        return;
+    }
+
+    Error* freeEntryError = NULL;
+    freeEntry(cachedEntry->entry,&freeEntryError);
+    if(freeEntryError != NULL){
+        createError(error,functionName,"Error during the free of entry",NULL,freeEntryError);
+        return;
+    }
+}
+
+void freeHashMap(HashMap* hashMap,Error** error){
+    char* functionName = "hashage.freeHashMap";
+    if (*error != NULL){
+        createError(error,functionName,"Error not null",NULL,NULL);
+        return;
+    }
+    if(hashMap == NULL){
+        createError(error,functionName,"hashMap cannot be null",NULL,NULL);
+        return;
+    }
+    for(int i = 0;i<hashMap->dataSize;i++){
+        while(hashMap->data[i] != NULL){
+            Error* freeCachedEntryError = NULL;
+            freeCachedEntry(hashMap->data[i],freeCachedEntryError);
+            if(freeCachedEntryError != NULL){
+                createError(error,functionName,"Error during the free of the cachedEntry",NULL,freeCachedEntryError);
+                return;
+            }
+        }
+    }
+    free(hashMap->data);
+}
+
+void freeCachedHashMap(CachedHashMap* cachedHashMap,Error** error){
+    char* functionName = "hashage.freeCachedHashMap";
+    if (*error != NULL){
+        createError(error,functionName,"Error not null",NULL,NULL);
+        return;
+    }
+    if(cachedHashMap == NULL){
+        createError(error,functionName,"CachedHashMap cannot be null",NULL,NULL);
+        return;
+    }
+    Error* freeHashMapError = NULL;
+    freeHashMap(cachedHashMap->hashMap,&freeHashMapError);
+    if(freeHashMapError != NULL){
+        createError(error,functionName,"Error during the free of the HashMap",NULL,freeHashMapError);
+        return;
+    }
+}
+
+void deleteCachedEntryFromHashMap(CachedEntry* cachedEntry,Error** error){
+    char* functionName = "hashage.deleteCachedEntryFromHashMap";
+    if (*error != NULL){
+        createError(error,functionName,"Error not null",NULL,NULL);
+        return;
+    }
+    if(cachedEntry->cachedHashMap == NULL){
+        createError(error,functionName,"CachedHashMap cannot be null",NULL,NULL);
+        return;
+    }
+    if(cachedEntry->cachedHashMap->hashMap == NULL){
+        createError(error,functionName,"HashMap cannot be null",NULL,NULL);
+        return;
+    }
+    if(cachedEntry == NULL){
+        createError(error,functionName,"cachedEntry cannot be null",NULL,NULL);
+        return;
+    }
+    //If the entry is directly in the data
+    if(cachedEntry->entry->previous == NULL){
+        //If the entry is directly in the HashMap data
+        Error** getHashMapCachedEntryPointerError = NULL;
+        CachedEntry** cachedEntryPointer = getHashMapCachedEntryPointer(cachedEntry->cachedHashMap->hashMap,cachedEntry->entry,&getHashMapCachedEntryPointerError);
+        if(getHashMapCachedEntryPointerError != NULL){
+            createError(error,functionName,"Error during the fetch of the cachedEntry pointer",NULL,getHashMapCachedEntryPointerError);
+            return;
+        }
+        if(*cachedEntryPointer == NULL){
+            createError(error,functionName,"CachedEntry should be in HashMap data",NULL,NULL);
+            return;
+        }
+        (*cachedEntryPointer) = cachedEntry->entry->next;
+        if(cachedEntry->entry->next != NULL){
+            cachedEntry->entry->next->previous = NULL;
+        }
+    }else{
+        if(cachedEntry->entry->next != NULL){
+            cachedEntry->entry->next->previous = cachedEntry->entry->previous;
+        }
+        cachedEntry->entry->previous->next = cachedEntry->entry->next;
+    }
+}
+
+void deleteCachedEntryFromCachedHashMap(CachedEntry* cachedEntry,Error** error){
+    char* functionName = "hashage.deleteCachedEntryFromCachedHashMap";
+    if (*error != NULL){
+        createError(error,functionName,"Error not null",NULL,NULL);
+        return;
+    }
+    if(cachedEntry->cachedHashMap == NULL){
+        createError(error,functionName,"CachedHashMap cannot be null",NULL,NULL);
+        return;
+    }
+    if(cachedEntry == NULL){
+        createError(error,functionName,"cachedEntry cannot be null",NULL,NULL);
+        return;
+    }
+
+    if(cachedEntry->previous != NULL){
+        cachedEntry->previous->next = cachedEntry->next;
+    }else{
+        cachedEntry->cachedHashMap->firstCached = cachedEntry->next;
+    }
+    if(cachedEntry->next != NULL){
+        cachedEntry->next->previous = cachedEntry->previous;
+    }else{
+        cachedEntry->cachedHashMap->lastCached = cachedEntry->previous;
+    }
+
+    cachedEntry->cachedHashMap->count--;
+}
+
+CachedHashMap** getHashMapCachedEntryPointer(HashMap* hashMap,Entry* entry,Error** error){
+    char* functionName = "hashage.getHashMapCachedEntryPointer";
+    if (*error != NULL){
+        createError(error,functionName,"Error not null",NULL,NULL);
+        return NULL;
+    }
+    if(hashMap == NULL){
+        createError(error,functionName,"HashMap cannot be null",NULL,NULL);
+        return NULL;
+    }
+    if(entry == NULL){
+        createError(error,functionName,"Entry cannot be null",NULL,NULL);
+        return NULL;
+    }
+    unsigned long index = hash(entry->table,entry->id,hashMap->dataSize);
+    return &hashMap->data[index];
+}
+
+CachedHashMap* createCachedHashMap(int capacity,int dataSize,Error** error){
+    char* functionName = "hashage.createCachedHashMap";
+    if (*error != NULL){
+        createError(error,functionName,"Error not null",NULL,NULL);
+        return NULL;
+    }
+
+    Error* createHashMapError = NULL;
+    HashMap* hashMap = createHashMap(dataSize,&createHashMapError);
+    if(createHashMapError != NULL){
+        createError(error,functionName,"Error during the creation of the hashMap",NULL,createHashMapError);
+        return NULL;
+    }
+    CachedHashMap* result = malloc(sizeof(CachedHashMap));
+    *result = (CachedHashMap){
+        .capacity = capacity,
+        .count = 0,
+        .firstCached = NULL,
+        .lastCached = NULL,
+        .hashMap = hashMap
+    };
+    return result;
+}
+
+CachedHashMap* initHashMap(char* name,int dataSize,int cacheCapacity,Error** error){
+    char* functionName = "hashage.initHashMap";
     if (*error != NULL){
         createError(error,functionName,"Error not null",NULL,NULL);
         return NULL;
@@ -15,53 +284,40 @@ CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** e
     FILE* fp = readHashMapFile(name);
     if(fp == NULL){
         printf("No HashMap to import, creating it\n");
-        HashMap* hashmap = malloc(sizeof(HashMap));
-        CachedHashMap* cachedHashMap = malloc(sizeof(CachedHashMap));
-        CachedEntry** data = calloc(dataSize,sizeof(CachedEntry*));
+        Error* createCachedHashMapError = NULL;
+        CachedHashMap* result = createCachedHashMap(cacheCapacity,dataSize,&createCachedHashMapError);
+        if(createCachedHashMapError != NULL){
+            createError(error,functionName,"Error during the creation of the cachedHashMap",NULL,createCachedHashMapError);
+            return NULL;
+        }
 
-        *cachedHashMap = (CachedHashMap){
-            .hashMap = hashmap,
-            .count = 0,
-            .capacity = cacheCapacity,
-        };
-        *hashmap = (HashMap){
-            .dataSize = dataSize,
-            .entrySize = sizeof(CachedEntry),
-            .data = data
-        };
         Error* hashMapCreationErrror = NULL;
-        createHashMapFile(name,hashmap,&hashMapCreationErrror);
+        createHashMapFile(name,result->hashMap,&hashMapCreationErrror);
         if (hashMapCreationErrror != NULL){
             createError(error,functionName,"Error during the creation of the HashMap file",NULL,hashMapCreationErrror);
             return NULL;
         }
-        return cachedHashMap;
+        return result;
     }else{
         printf("Starting the importation of the existing HashMap\n");
-        HashMap* hashmap = malloc(sizeof(HashMap));
-        CachedHashMap* cachedHashMap = malloc(sizeof(CachedHashMap));
 
         Error* hashMapImportError = NULL;
-        int* importedData = importHashMapFromFile(name,&hashMapImportError);
+        int hashMapDataSize = getHashMapDataSize(name,&hashMapImportError);
         if(hashMapImportError != NULL){
             createError(error,functionName,"Error during the import of the HashMap from file",NULL,hashMapImportError);
             fclose(fp);
             return NULL;
         }
 
-        CachedEntry** data = calloc(importedData[1],sizeof(CachedEntry*));
-         *cachedHashMap = (CachedHashMap){
-            .hashMap = hashmap,
-            .count = 0,
-            .capacity = cacheCapacity,
-        };
-        *hashmap = (HashMap){
-            .dataSize = importedData[1],
-            .entrySize = importedData[0],
-            .data = data
-        };
+        Error* createCachedHashMapError = NULL;
+        CachedHashMap* result = createCachedHashMap(cacheCapacity,dataSize,&createCachedHashMapError);
+        if(createCachedHashMapError != NULL){
+            createError(error,functionName,"Error during the creation of the cachedHashMap",NULL,createCachedHashMapError);
+            return NULL;
+        }
+
         fclose(fp);
-        return cachedHashMap;
+        return result;
     }
     return NULL;
 }

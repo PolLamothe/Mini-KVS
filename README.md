@@ -16,6 +16,14 @@
 
 - Modular Architecture: Clean separation of concerns (Input, Error, Hashing, Persistence).
 
+## 📏 Conventions
+To ensure code robustness and maintainability, the following rules must be followed:
+
+### Memory Management
+
+- Every structure's string attributes must be malloc in the allocation function and not be the pointer provided to the function.
+- If a structure have an attribute that need its own allocation or a linkage then it must have its own allocation and free function.
+
 ## 🛠 Architecture
 ### Data Structure
 

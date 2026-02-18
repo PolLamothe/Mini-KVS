@@ -10,7 +10,7 @@ int main(){
     int dataSize = 100;
     char name[] = "test.db";
 
-    CachedHashMap* hashmap = createHashMap(name,dataSize,50,&error);
+    CachedHashMap* hashmap = initHashMap(name,dataSize,50,&error);
     if(error != NULL){
         printErrorStack(error);
         return -1;

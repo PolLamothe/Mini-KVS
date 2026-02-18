@@ -36,35 +36,32 @@ void createHashMapFile(char* filename,HashMap* hashmap,Error** error){
     }
     fp = writeHashMapFile(filename);
 
-    int entrySize = (int)hashmap->entrySize;
-    fwrite(&entrySize,sizeof(int),1,fp);
     fwrite(&hashmap->dataSize,sizeof(int),1,fp);
     fclose(fp);
     return;
 }
 
-int* importHashMapFromFile(char* filename,Error** error){
-    char* functionName = "persistence.importHashMapFromFile";
+int getHashMapDataSize(char* filename,Error** error){
+    char* functionName = "persistence.getHashMapDataSize";
     if (*error != NULL){
         createError(error,functionName,"Error must be null",NULL,NULL);
-        return NULL;
+        return -1;
     }
 
     FILE* fp = readHashMapFile(filename);
     if( fp == NULL){
         createError(error,functionName,"Can't open HashMap file",NULL,NULL);
-        return NULL;
+        return -1;
     }
-    int* data = malloc(2 * sizeof(int));
+    int data;
 
-    size_t lus = fread(data, sizeof(int), 2, fp);
-    if(lus < 2){
+    size_t lus = fread(&data, sizeof(int), 1, fp);
+    if(lus != 1){
         char debug[255];
         sprintf(debug,"%d int read\n",(int)lus);
         createError(error,functionName,"Didn't read 2 int value at the beginning of the file",debug,NULL);
-        free(data);
         fclose(fp);
-        return NULL;
+        return -1;
     }
     fclose(fp);
     return data;
@@ -138,7 +135,7 @@ Entry* searchEntryInFile(char* filename,char* table, int id,Error** error){
         fclose(fp);
         return NULL;
     }
-    fseek(fp,sizeof(int)*2,SEEK_SET);//We put the cursor after the file header
+    fseek(fp,sizeof(int),SEEK_SET);//We put the cursor after the file header
 
     while(1){
         //For every entry in the file
@@ -163,7 +160,6 @@ Entry* searchEntryInFile(char* filename,char* table, int id,Error** error){
                 break;
             }
             if (table[i] != c){
-                printf("Expected : %c | found : %c\n",table[i],c);
                 interrupted = true;
                 break;
             }

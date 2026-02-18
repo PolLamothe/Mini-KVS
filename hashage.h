@@ -18,13 +18,9 @@ typedef struct Entry{
     struct CachedEntry* previous;
 } Entry;
 
-typedef struct Table{
-    char name;
-    int count;
-}Table;
-
 typedef struct CachedEntry{
     Entry* entry;
+    struct CachedHashMap* cachedHashMap;
     struct CachedEntry* previous;
     struct CachedEntry* next;
 }CachedEntry;
@@ -32,7 +28,6 @@ typedef struct CachedEntry{
 typedef struct HashMap{
     CachedEntry** data;
     int dataSize;
-    size_t entrySize;
 }HashMap;
 
 typedef struct CachedHashMap{
@@ -43,7 +38,27 @@ typedef struct CachedHashMap{
     CachedEntry* lastCached;
 }CachedHashMap;
 
-CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** error);
+CachedHashMap* initHashMap(char* name,int dataSize,int cacheCapacity,Error** error);
+
+Entry* createEntry(char* table,int id,void* value,EntryValueType valueType,CachedEntry* next,CachedEntry* previous,Error** error);
+
+void freeEntry(Entry* entry, Error** error);
+
+HashMap* createHashMap(int dataSize,Error** error);
+
+CachedHashMap* createCachedHashMap(int capacity,int dataSize,Error** error);
+
+void freeHashMap(HashMap* hashMap,Error** error);
+
+void freeCachedEntry(CachedEntry* cachedEntry,Error** error);
+
+void deleteCachedEntryFromCachedHashMap(CachedEntry* cachedEntry,Error** error);
+
+void deleteCachedEntryFromHashMap(CachedEntry* cachedEntry,Error** error);
+
+CachedHashMap** getHashMapCachedEntryPointer(HashMap* hashMap,Entry* entry,Error** error);
+
+unsigned long hash(char *table, int id, int capacity);
 
 void verifyEntryForInsert(Entry* entry,Error** error);
 
