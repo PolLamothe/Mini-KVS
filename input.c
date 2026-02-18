@@ -18,6 +18,10 @@ UserAction* getEntry(char* input,Error** error){
         createError(error,functionName,"Error must be null",NULL,NULL);
         return NULL;
     }    
+
+    UserAction* result = (UserAction*)malloc(sizeof(UserAction));
+
+    result->entry = (Entry*)malloc(sizeof(Entry));
     
     int actionIndex = -1;
     for(int i = 0;i<strlen(input);i++){
@@ -34,15 +38,14 @@ UserAction* getEntry(char* input,Error** error){
         return NULL;
     }
 
-    char actionString[actionIndex-1];
+    char actionString[actionIndex+1];
     
     strncpy(actionString, input, actionIndex);
 
-    enum ActionType action;
     if(strcmp(actionString,"ADD") == 0){
-        action = INSERT;
+        result->type = INSERT;
     }else if(strcmp(actionString,"FIND") == 0){
-        action = FIND;
+        result->type = FIND;
     }else{
         createError(error,functionName,"Invalid action",actionString,NULL);
         return NULL;
@@ -70,8 +73,10 @@ UserAction* getEntry(char* input,Error** error){
         createError(error,functionName,"No delimiter found for Table",NULL,NULL);
         return NULL;
     }
-    char* table = malloc((tableEndIndex-tableStartIndex)*sizeof(char));
+    char* table = malloc((tableEndIndex-tableStartIndex+1)*sizeof(char));
+    table[(tableEndIndex-tableStartIndex)] = '\0';
     strncpy(table, input+tableStartIndex, tableEndIndex-tableStartIndex);
+    result->entry->table = table;
 
     int keyStartIndex = -1;
     int keyEndIndex = -1;
@@ -96,13 +101,26 @@ UserAction* getEntry(char* input,Error** error){
         createError(error,functionName,"No Key found",NULL,NULL);
         return NULL;
     }
-    if(keyEndIndex == -1){
+    if(keyEndIndex == -1 && result->type == INSERT){
         createError(error,functionName,"No delimiter found for Key",NULL,NULL);
         return NULL;
     }
-    char* keyChar = malloc((keyEndIndex-keyStartIndex)*sizeof(char));
-    strncpy(keyChar, input+keyStartIndex, keyEndIndex-keyStartIndex);
+    char* keyChar;
+    if(keyEndIndex != -1){
+        keyChar = malloc((keyEndIndex-keyStartIndex+1)*sizeof(char));
+        keyChar[(keyEndIndex-keyStartIndex)] = '\0';
+        strncpy(keyChar, input+keyStartIndex, keyEndIndex-keyStartIndex);
+    }else{
+        keyChar = malloc((strlen(input)-keyStartIndex+1)*sizeof(char));
+        keyChar[(strlen(input)-keyStartIndex)] = '\0';
+        strncpy(keyChar, input+keyStartIndex, strlen(input)-keyStartIndex);
+    }
     int key = atoi(keyChar);
+    result->entry->id = key;
+
+    if(result->type == FIND){
+        return result;
+    }
 
     int valueStartIndex = -1;
     int valueEndIndex = strlen(input);
@@ -122,29 +140,19 @@ UserAction* getEntry(char* input,Error** error){
         return NULL;
     }
 
-    char* value = malloc((strlen(input)-valueStartIndex)*sizeof(char));
+    char* value = malloc((strlen(input)-valueStartIndex+1)*sizeof(char));
+    value[strlen(input)-valueStartIndex] = '\0';
     strncpy(value, input+valueStartIndex, strlen(input)-valueStartIndex);
 
-    Entry* entry = malloc(sizeof(Entry));
-    *entry = (Entry){
-        .id = key,
-        .table = table
-    };
     if(isInt){
         int* valueAdress = malloc(sizeof(int));
         *valueAdress = (int)value;
-        entry->value = valueAdress;
-        entry->valueSize = sizeof(int);
+        result->entry->value = valueAdress;
+        result->entry->valueSize = sizeof(int);
     }else{
-        entry->value = value;
-        entry->valueSize = sizeof(char) * strlen(value);
+        result->entry->value = value;
+        result->entry->valueSize = sizeof(char) * strlen(value);
     }
-    
-    UserAction* result = malloc(sizeof(UserAction));
-    *result = (UserAction){
-        .entry = entry,
-        .type = action
-    };
     return result;
 }
 

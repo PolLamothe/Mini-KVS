@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g
+CFLAGS = -Wall -Wextra -g -O0 -fsanitize=address
 # Add persistence.o to the OBJ list
 OBJ = main.o hashage.o error.o persistence.o input.o
 EXEC = mini-kvs

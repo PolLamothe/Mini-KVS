@@ -88,21 +88,34 @@ void insertEntry(char* filename,Entry* entry,Error** error){
         return;
     }
 
-    char debug[255];
     if(!fwrite(entry->table,strlen(entry->table),1,fp)){
-        createError(error,functionName,"Table name wasn't written",debug,NULL);
+        createError(error,functionName,"Table name wasn't written",NULL,NULL);
         fclose(fp);
         return;
     };
     if(!fwrite(&(entry->id),sizeof(int),1,fp)){
-        createError(error,functionName,"ID wasn't written",debug,NULL);
+        createError(error,functionName,"ID wasn't written",NULL,NULL);
         fclose(fp);
         return;
     }
     if(!fwrite(entry->value,entry->valueSize,1,fp)){
-        createError(error,functionName,"Value wasn't written",debug,NULL);
+        createError(error,functionName,"Value wasn't written",NULL,NULL);
         fclose(fp);
         return;
     }
     fclose(fp);
+}
+
+Entry* searchEntryInFile(char* filename,char* table, int id,Error** error){
+    char* functionName = "persistence.searchEntryInFile";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return NULL;
+    }
+    FILE* fp = writeHashMapFile(filename);
+    if(fp == NULL){
+        createError(error,functionName,"File can't be null",NULL,NULL);
+        fclose(fp);
+        return NULL;
+    }
 }

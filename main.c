@@ -50,6 +50,18 @@ int main(){
 
             printEntry(userAction->entry);
             printf("Insertion réussi !\n");
+        }else if(userAction->type == FIND){
+            Error* searchEntryInCachedHashMapError = NULL;
+            CachedEntry* result = searchEntryInCachedHashMap(hashmap,userAction->entry->table,userAction->entry->id,&searchEntryInCachedHashMapError);
+            if(searchEntryInCachedHashMapError != NULL){
+                printErrorStack(searchEntryInCachedHashMapError);
+                return -1;
+            }
+            if(result == NULL){
+                printf("Données non trouvée dans le cache");
+            }else{
+                printEntry(result->entry);                
+            }
         }
         free(userInput);
     }

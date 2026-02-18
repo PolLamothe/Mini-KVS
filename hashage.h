@@ -50,4 +50,6 @@ void removeCachedEntryFromCachedHashMap(CachedHashMap* cachedHashmap,CachedEntry
 
 void removeEntryFromHashMap(HashMap* hashmap,Entry* entry,Error** error);
 
+CachedEntry* searchEntryInCachedHashMap(CachedHashMap* cachedHashMap,char* table, int id,Error** error);
+
 #endif

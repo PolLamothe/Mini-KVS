@@ -17,7 +17,7 @@ CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** e
         printf("No HashMap to import, creating it\n");
         HashMap* hashmap = malloc(sizeof(HashMap));
         CachedHashMap* cachedHashMap = malloc(sizeof(CachedHashMap));
-        CachedEntry** data = malloc(sizeof(CachedEntry*)*dataSize);
+        CachedEntry** data = calloc(dataSize,sizeof(CachedEntry*));
 
         *cachedHashMap = (CachedHashMap){
             .hashMap = hashmap,
@@ -49,7 +49,7 @@ CachedHashMap* createHashMap(char* name,int dataSize,int cacheCapacity,Error** e
             return NULL;
         }
 
-        CachedEntry** data = malloc(sizeof(CachedEntry*)*importedData[1]);
+        CachedEntry** data = calloc(importedData[1],sizeof(CachedEntry*));
          *cachedHashMap = (CachedHashMap){
             .hashMap = hashmap,
             .count = 0,
@@ -254,4 +254,33 @@ void removeEntryFromHashMap(HashMap* hashmap,Entry* entry,Error** error){
     free(entry->table);
     free(entry->value);
     free(entry);
+}
+
+CachedEntry* searchEntryInCachedHashMap(CachedHashMap* cachedHashMap,char* table, int id,Error** error){
+    char* functionName = "hashage.searchEntryInCachedHashMap";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return NULL;
+    }
+    if(cachedHashMap == NULL){
+        createError(error,functionName,"CachedHashMap cannot be null",NULL,NULL);
+        return NULL;
+    }
+    if(table == NULL){
+        createError(error,functionName,"table cannot be null",NULL,NULL);
+        return NULL;
+    }
+    unsigned long index = hash(table,id,cachedHashMap->hashMap->dataSize);
+    CachedEntry* current = cachedHashMap->hashMap->data[index];
+    if(current == NULL){
+        return NULL;
+    }
+    
+    while(current != NULL){
+        if(current->entry->id == id && strcmp(table,current->entry->table) == 0){
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
 }
