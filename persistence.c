@@ -50,7 +50,7 @@ int* importHashMapFromFile(char* filename,Error** error){
         return NULL;
     }
 
-    FILE* fp = writeHashMapFile(filename);
+    FILE* fp = readHashMapFile(filename);
     if( fp == NULL){
         createError(error,functionName,"Can't open HashMap file",NULL,NULL);
         return NULL;
@@ -59,7 +59,9 @@ int* importHashMapFromFile(char* filename,Error** error){
 
     size_t lus = fread(data, sizeof(int), 2, fp);
     if(lus < 2){
-        createError(error,functionName,"Didn't read 2 int value at the beginning of the file",NULL,NULL);
+        char debug[255];
+        sprintf(debug,"%d int read\n",(int)lus);
+        createError(error,functionName,"Didn't read 2 int value at the beginning of the file",debug,NULL);
         free(data);
         fclose(fp);
         return NULL;
@@ -87,8 +89,20 @@ void insertEntry(char* filename,Entry* entry,Error** error){
         fclose(fp);
         return;
     }
+    int valueSize;
+    if(entry->valueType == INT32){
+        valueSize = sizeof(int32_t);
+    }else if(entry->valueType == STRING){
+        valueSize = (int)(strlen(entry->value)+1);
+    }
 
-    if(!fwrite(entry->table,strlen(entry->table),1,fp)){
+    int entrySize = strlen(entry->table)+1+sizeof(int)+sizeof(int)+valueSize;
+    if(!fwrite(&entrySize,sizeof(int),1,fp)){
+        createError(error,functionName,"Entry size   wasn't written",NULL,NULL);
+        fclose(fp);
+        return;
+    }
+    if(!fwrite(entry->table,strlen(entry->table)+1,1,fp)){
         createError(error,functionName,"Table name wasn't written",NULL,NULL);
         fclose(fp);
         return;
@@ -98,7 +112,13 @@ void insertEntry(char* filename,Entry* entry,Error** error){
         fclose(fp);
         return;
     }
-    if(!fwrite(entry->value,entry->valueSize,1,fp)){
+    int valueType = (int)entry->valueType;
+    if(!fwrite(&valueType,sizeof(int),1,fp)){
+        createError(error,functionName,"Value type wasn't written",NULL,NULL);
+        fclose(fp);
+        return;
+    }
+    if(!fwrite(entry->value,valueSize,1,fp)){
         createError(error,functionName,"Value wasn't written",NULL,NULL);
         fclose(fp);
         return;
@@ -112,10 +132,97 @@ Entry* searchEntryInFile(char* filename,char* table, int id,Error** error){
         createError(error,functionName,"Error must be null",NULL,NULL);
         return NULL;
     }
-    FILE* fp = writeHashMapFile(filename);
+    FILE* fp = readHashMapFile(filename);
     if(fp == NULL){
         createError(error,functionName,"File can't be null",NULL,NULL);
         fclose(fp);
         return NULL;
     }
+    fseek(fp,sizeof(int)*2,SEEK_SET);//We put the cursor after the file header
+
+    while(1){
+        //For every entry in the file
+        int entrySize;
+        fread(&entrySize,sizeof(int),1,fp);
+        if (feof(fp)) break;
+        long adressSave = ftell(fp);
+        char tableName[255];
+        int i = 0;
+        char c;
+        bool interrupted = false;
+        while (1) {
+            //For every char in the table name in the file
+            c = fgetc(fp);
+            if(i > strlen(table)+1 || c == EOF){
+                interrupted = true;
+                break;
+            }
+            tableName[i] = c;
+            if (i == 255){
+                interrupted = true;
+                break;
+            }
+            if (table[i] != c){
+                printf("Expected : %c | found : %c\n",table[i],c);
+                interrupted = true;
+                break;
+            }
+            if(table[i] == '\0'){
+                break;
+            }
+            i++;
+        }
+        if(interrupted){
+            fseek(fp,adressSave+entrySize,SEEK_SET);
+            continue;
+        }
+        int readId;
+        fread(&readId,sizeof(int),1,fp);
+        if(readId == id){
+            Entry* result = (Entry*)calloc(sizeof(Entry),1);
+            EntryValueType valueType;
+            fread(&valueType,sizeof(int),1,fp);
+
+            result->id = id;
+            result->table = table;
+            result->valueType = valueType;
+
+            if(valueType == INT32){
+                int32_t* value = malloc(sizeof(int32_t));
+                fread(value,sizeof(int32_t),1,fp);
+                result->value = value;
+            }else if(valueType == STRING){
+                char value[255];
+                int i = 0;
+                char c = fgetc(fp);
+                while (c != EOF) {
+                    value[i] = c;
+                    i++;
+                    if(c == '\0'){
+                        break;
+                    }
+                    c = fgetc(fp);
+                }
+                char* cleanedValue = malloc((strlen(value)+1)*sizeof(char));
+                if(cleanedValue == NULL){
+                    createError(error,functionName,"Cleaned value memory allocation failed",NULL,NULL);
+                    free(result);
+                    fclose(fp);
+                    return NULL;
+                }
+                strcpy(cleanedValue, value);
+                result->value = cleanedValue;
+            }else{
+                createError(error,functionName,"Invalid value type",NULL,NULL);
+                free(result);
+                fclose(fp);
+                return NULL;
+            }
+            return result;
+        }else{
+            fseek(fp,adressSave+entrySize,SEEK_SET);
+            continue;
+        }
+    }
+    return NULL;
 }

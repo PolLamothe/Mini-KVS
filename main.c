@@ -49,7 +49,7 @@ int main(){
             }
 
             printEntry(userAction->entry);
-            printf("Insertion réussi !\n");
+            printf("Inserted successfully !\n");
         }else if(userAction->type == FIND){
             Error* searchEntryInCachedHashMapError = NULL;
             CachedEntry* result = searchEntryInCachedHashMap(hashmap,userAction->entry->table,userAction->entry->id,&searchEntryInCachedHashMapError);
@@ -57,10 +57,23 @@ int main(){
                 printErrorStack(searchEntryInCachedHashMapError);
                 return -1;
             }
-            if(result == NULL){
-                printf("Données non trouvée dans le cache");
-            }else{
+            if(result != NULL){
+                printf("Data found in the cache !\n");
                 printEntry(result->entry);                
+            }else{
+                printf("Data not found in the cache\n");
+                Error* searchEntryInFileError = NULL;
+                Entry* fileResult = searchEntryInFile(name,userAction->entry->table,userAction->entry->id,&searchEntryInFileError);
+                if(searchEntryInFileError != NULL){
+                    printErrorStack(searchEntryInCachedHashMapError);
+                    return -1;
+                }
+                if(fileResult == NULL){
+                    printf("Data not found in the db file\n");
+                }else{
+                    printf("Data found in the db file !\n");
+                    printEntry(fileResult);
+                }
             }
         }
         free(userInput);

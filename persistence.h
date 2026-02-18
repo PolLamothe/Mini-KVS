@@ -15,4 +15,6 @@ int* importHashMapFromFile(char* filename,Error** error);
 
 void insertEntry(char* filename,Entry* entry,Error** error);
 
+Entry* searchEntryInFile(char* filename,char* table, int id,Error** error);
+
 #endif

@@ -4,11 +4,16 @@
 #include <string.h>
 #include "error.h"
 
+typedef enum EntryValueType{
+    INT32,
+    STRING,
+}EntryValueType;
+
 typedef struct Entry{
     char* table;
     int id;
     void* value;
-    size_t valueSize;
+    EntryValueType valueType;
     struct CachedEntry* next;
     struct CachedEntry* previous;
 } Entry;

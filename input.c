@@ -19,9 +19,9 @@ UserAction* getEntry(char* input,Error** error){
         return NULL;
     }    
 
-    UserAction* result = (UserAction*)malloc(sizeof(UserAction));
+    UserAction* result = (UserAction*)calloc(1,sizeof(UserAction));
 
-    result->entry = (Entry*)malloc(sizeof(Entry));
+    result->entry = (Entry*)calloc(1,sizeof(Entry));
     
     int actionIndex = -1;
     for(int i = 0;i<strlen(input);i++){
@@ -106,7 +106,9 @@ UserAction* getEntry(char* input,Error** error){
         return NULL;
     }
     char* keyChar;
+
     if(keyEndIndex != -1){
+        //If the key isn't the end of the input
         keyChar = malloc((keyEndIndex-keyStartIndex+1)*sizeof(char));
         keyChar[(keyEndIndex-keyStartIndex)] = '\0';
         strncpy(keyChar, input+keyStartIndex, keyEndIndex-keyStartIndex);
@@ -115,6 +117,7 @@ UserAction* getEntry(char* input,Error** error){
         keyChar[(strlen(input)-keyStartIndex)] = '\0';
         strncpy(keyChar, input+keyStartIndex, strlen(input)-keyStartIndex);
     }
+
     int key = atoi(keyChar);
     result->entry->id = key;
 
@@ -145,13 +148,13 @@ UserAction* getEntry(char* input,Error** error){
     strncpy(value, input+valueStartIndex, strlen(input)-valueStartIndex);
 
     if(isInt){
-        int* valueAdress = malloc(sizeof(int));
-        *valueAdress = (int)value;
+        int32_t* valueAdress = malloc(sizeof(int32_t));
+        *valueAdress = (int32_t)value;
         result->entry->value = valueAdress;
-        result->entry->valueSize = sizeof(int);
+        result->entry->valueType = INT32;
     }else{
         result->entry->value = value;
-        result->entry->valueSize = sizeof(char) * strlen(value);
+        result->entry->valueType = STRING;
     }
     return result;
 }
