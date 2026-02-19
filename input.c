@@ -12,16 +12,29 @@ char* getUserInput(char* name){
     return userAction;
 }
 
+void freeUserAction(UserAction* userAction,Error** error){
+    char* functionName = "input.freeUserAction";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return;
+    }  
+    if(userAction->entry != NULL){
+        Error* freeEntryError = NULL;
+        freeEntry(userAction->entry,&freeEntryError);
+        if(freeEntryError != NULL){
+            createError(error,functionName,"Error during free Entry",NULL,freeEntryError);
+        return;
+        }
+    }
+    free(userAction);
+}
+
 UserAction* getEntry(char* input,Error** error){
     char* functionName = "input.getEntry";
     if (*error != NULL){
         createError(error,functionName,"Error must be null",NULL,NULL);
         return NULL;
-    }    
-
-    UserAction* result = (UserAction*)calloc(1,sizeof(UserAction));
-
-    result->entry = (Entry*)calloc(1,sizeof(Entry));
+    } 
     
     int actionIndex = -1;
     for(int i = 0;i<strlen(input);i++){
@@ -42,10 +55,12 @@ UserAction* getEntry(char* input,Error** error){
     
     strncpy(actionString, input, actionIndex);
 
+    ActionType resultType;
+
     if(strcmp(actionString,"ADD") == 0){
-        result->type = INSERT;
+        resultType = INSERT;
     }else if(strcmp(actionString,"FIND") == 0){
-        result->type = FIND;
+        resultType = FIND;
     }else{
         createError(error,functionName,"Invalid action",actionString,NULL);
         return NULL;
@@ -73,10 +88,9 @@ UserAction* getEntry(char* input,Error** error){
         createError(error,functionName,"No delimiter found for Table",NULL,NULL);
         return NULL;
     }
-    char* table = malloc((tableEndIndex-tableStartIndex+1)*sizeof(char));
+    char table[(tableEndIndex-tableStartIndex+1)];
     table[(tableEndIndex-tableStartIndex)] = '\0';
     strncpy(table, input+tableStartIndex, tableEndIndex-tableStartIndex);
-    result->entry->table = table;
 
     int keyStartIndex = -1;
     int keyEndIndex = -1;
@@ -101,7 +115,7 @@ UserAction* getEntry(char* input,Error** error){
         createError(error,functionName,"No Key found",NULL,NULL);
         return NULL;
     }
-    if(keyEndIndex == -1 && result->type == INSERT){
+    if(keyEndIndex == -1 && resultType == INSERT){
         createError(error,functionName,"No delimiter found for Key",NULL,NULL);
         return NULL;
     }
@@ -119,9 +133,23 @@ UserAction* getEntry(char* input,Error** error){
     }
 
     int key = atoi(keyChar);
-    result->entry->id = key;
 
-    if(result->type == FIND){
+    if(resultType == FIND){
+        Error* createEntryError = NULL;
+        Entry* resultEntry = createEntry(table,key,NULL,STRING,NULL,NULL,&createEntryError);
+        if(createEntryError != NULL){
+            createError(error,functionName,"Error during the creation of the entry",NULL,createEntryError);
+            free(keyChar);
+            return NULL;    
+        }
+
+        UserAction* result = malloc(sizeof(UserAction));
+        *result = (UserAction){
+            .type = resultType,
+            .entry = resultEntry
+        };
+        free(keyChar);
+
         return result;
     }
 
@@ -140,22 +168,41 @@ UserAction* getEntry(char* input,Error** error){
     }
     if(valueStartIndex == -1){
         createError(error,functionName,"No Value found",NULL,NULL);
+        free(keyChar);
         return NULL;
     }
 
-    char* value = malloc((strlen(input)-valueStartIndex+1)*sizeof(char));
+    char* value[(strlen(input)-valueStartIndex+1)];
     value[strlen(input)-valueStartIndex] = '\0';
     strncpy(value, input+valueStartIndex, strlen(input)-valueStartIndex);
 
+    void* resultValue;
+    EntryValueType resultValueType;
+
     if(isInt){
-        int32_t* valueAdress = malloc(sizeof(int32_t));
-        *valueAdress = (int32_t)value;
-        result->entry->value = valueAdress;
-        result->entry->valueType = INT32;
+        int32_t valueInt = (int32_t)value;
+        resultValue = &valueInt;
+        resultValueType = INT32;
     }else{
-        result->entry->value = value;
-        result->entry->valueType = STRING;
+        resultValue = value;
+        resultValueType = STRING;
     }
+
+    Error* createEntryError = NULL;
+    Entry* resultEntry = createEntry(table,key,resultValue,resultValueType,NULL,NULL,&createEntryError);
+    if(createEntryError != NULL){
+        createError(error,functionName,"Error during the creation of the entry",NULL,createEntryError);
+        free(keyChar);
+        return NULL;    
+    }
+
+    UserAction* result = malloc(sizeof(UserAction));
+    *result = (UserAction){
+        .type = resultType,
+        .entry = resultEntry
+    };
+
+    free(keyChar);
     return result;
 }
 

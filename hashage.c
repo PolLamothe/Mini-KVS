@@ -16,25 +16,36 @@ Entry* createEntry(char* table,int id,void* value,EntryValueType valueType,Cache
         createError(error,functionName,"Table cannot be null",NULL,NULL);
         return NULL;
     }
-    if(value == NULL){
-        createError(error,functionName,"Value cannot be null",NULL,NULL);
-        return NULL;
-    }
     char* tableHeap = malloc((strlen(table)+1)*sizeof(char));
     if(tableHeap == NULL){
         createError(error,functionName,"Error during the allocation of the table",NULL,NULL);
         return NULL;
     }
     strcpy(tableHeap,table);
+
     Entry* result = malloc(sizeof(Entry));
     *result = (Entry){
         .id = id,
         .next = next,
         .previous = previous,
         .table = tableHeap,
-        .value = value,
         .valueType = valueType
     };
+
+    if(value != NULL){
+        int taille;
+        if(valueType == STRING){
+            taille = strlen((char*)value)+1;
+        }else if(valueType == INT32){
+            taille = sizeof(int32_t);
+        }
+        
+        void* heapValue = malloc(taille);
+        memcpy(heapValue, value, taille);
+
+        result->value = heapValue;
+    };
+   
     return result;
 }
 

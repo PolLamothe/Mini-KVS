@@ -4,12 +4,14 @@
 #include "error.h"
 #include "hashage.h"
 
-enum ActionType {INSERT, FIND};
+typedef enum ActionType {INSERT, FIND} ActionType;
 
 typedef struct UserAction{
-    enum ActionType type;
+    ActionType type;
     Entry* entry;
 } UserAction;
+
+void freeUserAction(UserAction* userAction,Error** error);
 
 char* getUserInput(char* name);
 
