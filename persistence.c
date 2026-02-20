@@ -175,42 +175,35 @@ Entry* searchEntryInFile(char* filename,char* table, int id,Error** error){
         int readId;
         fread(&readId,sizeof(int),1,fp);
         if(readId == id){
-            Entry* result = (Entry*)calloc(sizeof(Entry),1);
             EntryValueType valueType;
             fread(&valueType,sizeof(int),1,fp);
 
-            result->id = id;
-            result->table = table;
-            result->valueType = valueType;
-
+            void* value;
             if(valueType == INT32){
-                int32_t* value = malloc(sizeof(int32_t));
+                value = (void*)(int32_t)0;
                 fread(value,sizeof(int32_t),1,fp);
-                result->value = value;
             }else if(valueType == STRING){
-                char value[255];
+                value = (char[255]){0};
                 int i = 0;
                 char c = fgetc(fp);
                 while (c != EOF) {
-                    value[i] = c;
+                    ((char*)value)[i] = c;
                     i++;
                     if(c == '\0'){
                         break;
                     }
                     c = fgetc(fp);
                 }
-                char* cleanedValue = malloc((strlen(value)+1)*sizeof(char));
-                if(cleanedValue == NULL){
-                    createError(error,functionName,"Cleaned value memory allocation failed",NULL,NULL);
-                    free(result);
-                    fclose(fp);
-                    return NULL;
-                }
-                strcpy(cleanedValue, value);
-                result->value = cleanedValue;
             }else{
                 createError(error,functionName,"Invalid value type",NULL,NULL);
-                free(result);
+                fclose(fp);
+                return NULL;
+            }
+
+            Error* createEntryError = NULL;
+            Entry* result = createEntry(table,id,value,valueType,NULL,NULL,&createEntryError);
+            if(createEntryError != NULL){
+                createError(error,functionName,"Error during entry creation",NULL,createEntryError);
                 fclose(fp);
                 return NULL;
             }
