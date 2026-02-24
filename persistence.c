@@ -123,6 +123,135 @@ void insertEntry(char* filename,Entry* entry,Error** error){
     fclose(fp);
 }
 
+FileScanner* getFileScanner(char* filename,Error** error){
+    char* functionName = "persistence.getFileScanner";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return NULL;
+    }
+    if(filename == NULL){
+        createError(error,functionName,"Filename cannot be null",NULL,NULL);
+        return NULL;
+    }
+    FILE* fp = readHashMapFile(filename);
+    if(fp == NULL){
+        createError(error,functionName,"File can't be null",NULL,NULL);
+        fclose(fp);
+        return NULL;
+    }
+    fseek(fp,sizeof(int),SEEK_SET);
+
+    FileScanner* result = malloc(sizeof(FileScanner));
+    *result = (FileScanner){
+        .file = fp,
+    };
+    return result;
+}
+
+void closeFileScanner(FileScanner* fileScanner,Error** error){
+    char* functionName = "persistence.closeFileScanner";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return;
+    }
+    if(fileScanner == NULL){
+        createError(error,functionName,"File scanner cannot be null",NULL,NULL);
+        return;
+    }
+    fclose(fileScanner->file);
+    fclose(fileScanner);
+}
+
+Entry* getNextFileEntry(FileScanner* fileScanner,Error** error){
+    char* functionName = "persistence.getNextFileEntry";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return NULL;
+    }
+    if(fileScanner == NULL){
+        createError(error,functionName,"File Scanner cannot be null",NULL,NULL);
+        return NULL;
+    }
+
+    int entrySize;
+    if(fread(&entrySize,sizeof(int),1,fileScanner->file) == 0){
+        return NULL;
+    }
+
+    long adressSave = ftell(fileScanner->file);
+    char tableName[255];
+    int i = 0;
+    char c = fgetc(fileScanner->file);
+    while (c != '\0') {
+        if(c == EOF){
+            createError(error,functionName,"File ended during table name reading",NULL,NULL);
+            fseek(fileScanner->file,adressSave+entrySize,SEEK_SET);
+            return NULL;
+        }
+        tableName[i] = c;
+        if (i == 255){
+            createError(error,functionName,"Table name too long reading",NULL,NULL);
+            fseek(fileScanner->file,adressSave+entrySize,SEEK_SET);
+            return NULL;
+        }
+        i++;
+        c = fgetc(fileScanner->file);
+    }
+    int readId;
+    if(fread(&readId,sizeof(int),1,fileScanner->file) != 1){
+        createError(error,functionName,"Error during the reading of the ID",NULL,NULL);
+        fseek(fileScanner->file,adressSave+entrySize,SEEK_SET);
+        return NULL;
+    }
+    EntryValueType valueType;
+    if(fread(&valueType,sizeof(int),1,fileScanner->file) != 1){
+        createError(error,functionName,"Error during the reading of the value type",NULL,NULL);
+        fseek(fileScanner->file,adressSave+entrySize,SEEK_SET);
+        return NULL;
+    }
+
+    void* value;
+    if(valueType == INT32){
+        value = (void*)(int32_t)0;
+        if(fread(value,sizeof(int32_t),1,fileScanner->file) != 1){
+            createError(error,functionName,"Error during the reading of the INT value",NULL,NULL);
+            fseek(fileScanner->file,adressSave+entrySize,SEEK_SET);
+            return NULL;
+        }
+    }else if(valueType == STRING){
+        value = (char[255]){0};
+        int i = 0;
+        char c = fgetc(fileScanner->file);
+        while (1) {
+            if(c == EOF){
+                createError(error,functionName,"Unexpected EOF during the reading of the entry string value",NULL,NULL);
+                fseek(fileScanner->file,adressSave+entrySize,SEEK_SET);
+                return NULL;
+            }
+            ((char*)value)[i] = c;
+            i++;
+            if(c == '\0'){
+                break;
+            }
+            c = fgetc(fileScanner->file);
+        }
+    }else{
+        createError(error,functionName,"Invalid value type",NULL,NULL);
+        fseek(fileScanner->file,adressSave+entrySize,SEEK_SET);
+        return NULL;
+    }
+
+    fseek(fileScanner->file,adressSave+entrySize,SEEK_SET);
+    
+    Error* createEntryError = NULL;
+    Entry* result = createEntry(tableName,readId,value,valueType,NULL,NULL,&createEntryError);
+    if(createEntryError != NULL){
+        createError(error,functionName,"Error during entry creation",NULL,createEntryError);
+        return NULL;
+    }
+    return result;
+}
+
 Entry* searchEntryInFile(char* filename,char* table, int id,Error** error){
     char* functionName = "persistence.searchEntryInFile";
     if (*error != NULL){

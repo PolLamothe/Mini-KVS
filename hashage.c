@@ -311,12 +311,12 @@ CachedHashMap* initHashMap(char* name,int dataSize,int cacheCapacity,Error** err
         return result;
     }else{
         printf("Starting the importation of the existing HashMap\n");
+        fclose(fp);
 
         Error* hashMapImportError = NULL;
         int hashMapDataSize = getHashMapDataSize(name,&hashMapImportError);
         if(hashMapImportError != NULL){
             createError(error,functionName,"Error during the import of the HashMap from file",NULL,hashMapImportError);
-            fclose(fp);
             return NULL;
         }
 
@@ -327,7 +327,34 @@ CachedHashMap* initHashMap(char* name,int dataSize,int cacheCapacity,Error** err
             return NULL;
         }
 
-        fclose(fp);
+        Error* getFileScannerError = NULL;
+        FileScanner* fileScanner = getFileScanner(name,&getFileScannerError);
+        if(getFileScannerError != NULL){
+            createError(error,functionName,"Error during the creation of the file scanner",NULL,getFileScannerError);
+            return NULL;
+        }
+
+        int count = 0;
+        while(1){
+            Error* getNextFileEntryError = NULL;
+            Entry* currentEntry = getNextFileEntry(fileScanner,&getNextFileEntryError);
+            if(getNextFileEntryError != NULL){
+                createError(error,functionName,"Error during the retrieval of the next file entry",NULL,getNextFileEntryError);
+                return NULL;
+            }
+            if(currentEntry == NULL){
+                break;
+            }
+            Error* addEntryInCachedHashMapError = NULL;
+            addEntryInCachedHashMap(result,currentEntry,&addEntryInCachedHashMapError);
+            count++;
+            if(addEntryInCachedHashMapError != NULL){
+                createError(error,functionName,"Error during the insertion of the entry in the cached hash map",NULL,addEntryInCachedHashMapError);
+                return NULL;
+            }
+        }
+
+        printf("%d entry imported into cache\n",count);
         return result;
     }
     return NULL;
