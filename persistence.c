@@ -197,6 +197,7 @@ Entry* getNextFileEntry(FileScanner* fileScanner,Error** error){
         i++;
         c = fgetc(fileScanner->file);
     }
+    tableName[i] = '\0';
     int readId;
     if(fread(&readId,sizeof(int),1,fileScanner->file) != 1){
         createError(error,functionName,"Error during the reading of the ID",NULL,NULL);

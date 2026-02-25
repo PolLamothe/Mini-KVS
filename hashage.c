@@ -386,7 +386,23 @@ void verifyEntryForInsert(Entry* entry,Error** error){
 }
 
 void printEntry(Entry* entry){
-    printf("Table : %s\nKey : %d\nValue : %s\n",entry->table,entry->id,(char*)entry->value);
+    if (entry == NULL) {
+        printf("Entry is NULL\n");
+        return;
+    }
+
+    printf("┌────────────────────────────────────────┐\n");
+    printf("│ Table: %-31s │\n", entry->table);
+    printf("│ ID:    %-31d │\n", entry->id);
+    
+    if (entry->valueType == STRING) {
+        printf("│ Type:  %-31s │\n", "STRING");
+        printf("│ Value: %-31s │\n", (char*)entry->value);
+    } else if (entry->valueType == INT32) {
+        printf("│ Type:  %-31s │\n", "INT32");
+        printf("│ Value: %-31d │\n", *(int32_t*)entry->value);
+    }
+    printf("└────────────────────────────────────────┘\n");
 }
 
 
@@ -441,13 +457,14 @@ void addEntryInCachedHashMap(CachedHashMap* hashmap,Entry* entry,Error** error){
         createError(error,functionName,"Entry cannot null",NULL,NULL);
         return;
     }
-    CachedEntry* cachedEntry;
+    CachedEntry* cachedEntry = malloc(sizeof(CachedEntry));
+    *cachedEntry = (CachedEntry){
+        .cachedHashMap = hashmap,
+        .entry = entry
+    };
     if(hashmap->firstCached == NULL){
         //If there is no entry in cache
-        cachedEntry = (CachedEntry*)malloc(sizeof(CachedEntry));
         hashmap->firstCached = cachedEntry;
-        hashmap->lastCached = hashmap->firstCached;
-        hashmap->firstCached->entry = entry;
     }else{
         if(hashmap->count >= hashmap->capacity){
             //If the cache is full
@@ -455,19 +472,21 @@ void addEntryInCachedHashMap(CachedHashMap* hashmap,Entry* entry,Error** error){
             removeCachedEntryFromCachedHashMap(hashmap,hashmap->lastCached,&removeCachedEntryError);
             if(removeCachedEntryError != NULL){
                 createError(error,functionName,"Error during the suppression of a cached entry",NULL,removeCachedEntryError);
+                free(cachedEntry);
                 return;
             }
         }
-        cachedEntry = (CachedEntry*)malloc(sizeof(CachedEntry));
-        cachedEntry->entry = entry;
         cachedEntry->next = hashmap->firstCached;
         hashmap->firstCached->previous = cachedEntry;
         hashmap->count++;
     }
+    hashmap->lastCached = cachedEntry;
+
     Error* addEntryInHashMapError = NULL;
     addEntryInHashMap(hashmap->hashMap,cachedEntry,&addEntryInHashMapError);
     if(addEntryInHashMapError != NULL){
         createError(error,functionName,"Error during the insert in the hashMap",NULL,addEntryInHashMapError);
+        free(cachedEntry);
         return;
     }
 }
