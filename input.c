@@ -6,10 +6,13 @@
 #include <stdbool.h>
 
 char* getUserInput(char* name){
-    char* userAction = malloc(sizeof(char)*255);
+    char userAction[255];
     printf("%s: ",name);
-    scanf("%254s",userAction);
-    return userAction;
+    fgets(userAction, sizeof(userAction), stdin);
+    userAction[strcspn(userAction, "\r\n")] = '\0';
+    char* result = malloc(strlen(userAction)+1);
+    strcpy(result,userAction);
+    return result;
 }
 
 void freeUserAction(UserAction* userAction,Error** error){
