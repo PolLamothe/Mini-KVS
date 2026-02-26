@@ -391,18 +391,52 @@ void printEntry(Entry* entry){
         return;
     }
 
-    printf("┌────────────────────────────────────────┐\n");
-    printf("│ Table: %-31s │\n", entry->table);
-    printf("│ ID:    %-31d │\n", entry->id);
+    int inner_width = 38;
+    int table_len = 7 + (int)strlen(entry->table);
+    if (table_len > inner_width) {
+        inner_width = table_len;
+    }
     
     if (entry->valueType == STRING) {
-        printf("│ Type:  %-31s │\n", "STRING");
-        printf("│ Value: %-31s │\n", (char*)entry->value);
-    } else if (entry->valueType == INT32) {
-        printf("│ Type:  %-31s │\n", "INT32");
-        printf("│ Value: %-31d │\n", *(int32_t*)entry->value);
+        int val_len = 7 + (int)strlen((char*)entry->value);
+        if (val_len > inner_width) {
+            inner_width = val_len;
+        }
     }
-    printf("└────────────────────────────────────────┘\n");
+
+    printf("┌");
+    for (int i = 0; i < inner_width + 2; i++) printf("─");
+    printf("┐\n");
+
+    printf("│ Table: %-*s │\n", inner_width - 7, entry->table);
+    printf("│ ID:    %-*d │\n", inner_width - 7, entry->id);
+    
+    if (entry->valueType == STRING) {
+        printf("│ Type:  %-*s │\n", inner_width - 7, "STRING");
+        printf("│ Value: %-*s │\n", inner_width - 7, (char*)entry->value);
+    } else if (entry->valueType == INT32) {
+        printf("│ Type:  %-*s │\n", inner_width - 7, "INT32");
+        printf("│ Value: %-*d │\n", inner_width - 7, *(int32_t*)entry->value);
+    }
+
+    printf("└");
+    for (int i = 0; i < inner_width + 2; i++) printf("─");
+    printf("┘\n");
+}
+
+void printCache(CachedHashMap* cachedHashMap) {
+    if (cachedHashMap == NULL) {
+        printf("CachedHashMap is NULL\n");
+        return;
+    }
+    printf("Cache content (Count: %d, Capacity: %d):\n", cachedHashMap->count, cachedHashMap->capacity);
+    CachedEntry* current = cachedHashMap->firstCached;
+    int i = 0;
+    while (current != NULL) {
+        printf("Entry %d:\n", i++);
+        printEntry(current->entry);
+        current = current->next;
+    }
 }
 
 
@@ -464,7 +498,7 @@ void addEntryInCachedHashMap(CachedHashMap* hashmap,Entry* entry,Error** error){
     };
     if(hashmap->firstCached == NULL){
         //If there is no entry in cache
-        hashmap->firstCached = cachedEntry;
+        hashmap->lastCached = cachedEntry;
     }else{
         if(hashmap->count >= hashmap->capacity){
             //If the cache is full
@@ -475,12 +509,13 @@ void addEntryInCachedHashMap(CachedHashMap* hashmap,Entry* entry,Error** error){
                 free(cachedEntry);
                 return;
             }
+        }else{
+            cachedEntry->next = hashmap->firstCached;
+            hashmap->firstCached->previous = cachedEntry;
         }
-        cachedEntry->next = hashmap->firstCached;
-        hashmap->firstCached->previous = cachedEntry;
-        hashmap->count++;
     }
-    hashmap->lastCached = cachedEntry;
+    hashmap->count++;
+    hashmap->firstCached = cachedEntry;
 
     Error* addEntryInHashMapError = NULL;
     addEntryInHashMap(hashmap->hashMap,cachedEntry,&addEntryInHashMapError);

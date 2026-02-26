@@ -64,6 +64,8 @@ void verifyEntryForInsert(Entry* entry,Error** error);
 
 void printEntry(Entry* entry);
 
+void printCache(CachedHashMap* cachedHashMap);
+
 void addEntryInCachedHashMap(CachedHashMap* hashmap,Entry* entry,Error** error);
 
 void removeCachedEntryFromCachedHashMap(CachedHashMap* cachedHashmap,CachedEntry* cachedEntry,Error** error);
