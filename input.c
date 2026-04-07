@@ -64,6 +64,8 @@ UserAction* getEntry(char* input,Error** error){
         resultType = INSERT;
     }else if(strcmp(actionString,"FIND") == 0){
         resultType = FIND;
+    }else if(strcmp(actionString,"SHOW") == 0){
+        resultType = SHOW;
     }else{
         createError(error,functionName,"Invalid action",actionString,NULL);
         return NULL;
@@ -87,13 +89,31 @@ UserAction* getEntry(char* input,Error** error){
         createError(error,functionName,"No table found",NULL,NULL);
         return NULL;
     }
-    if(tableEndIndex == -1){
+    if(tableEndIndex == -1 && resultType != SHOW){
         createError(error,functionName,"No delimiter found for Table",NULL,NULL);
         return NULL;
+    }else if(tableEndIndex == -1){
+        tableEndIndex = strlen(input);
     }
+
     char table[(tableEndIndex-tableStartIndex+1)];
     table[(tableEndIndex-tableStartIndex)] = '\0';
     strncpy(table, input+tableStartIndex, tableEndIndex-tableStartIndex);
+
+    if(resultType == SHOW){
+        Error* createEntryError = NULL;
+        Entry* resultEntry = createEntry(table,-1,NULL,STRING,NULL,NULL,&createEntryError);
+        if(createEntryError != NULL){
+            createError(error,functionName,"Error during the creation of the entry",NULL,createEntryError);
+            return NULL;
+        }
+        UserAction* result = malloc(sizeof(UserAction));
+        *result = (UserAction){
+            .type = SHOW,
+            .entry = resultEntry
+        };
+        return result;
+    }
 
     int keyStartIndex = -1;
     int keyEndIndex = -1;
@@ -114,6 +134,7 @@ UserAction* getEntry(char* input,Error** error){
             }
         }
     }
+
     if(keyStartIndex == -1){
         createError(error,functionName,"No Key found",NULL,NULL);
         return NULL;

@@ -253,6 +253,61 @@ Entry* getNextFileEntry(FileScanner* fileScanner,Error** error){
     return result;
 }
 
+Entry* getNextFileTableEntry(FileScanner* fileScanner,char* table,CachedHashMap* cachedHashMap,Error** error){
+    char* functionName = "persistence.getNextFileTableEntry";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return NULL;
+    }
+    if(fileScanner == NULL || table == NULL || cachedHashMap == NULL){
+        createError(error,functionName,"Args cannot be null",NULL,NULL);
+        return NULL;
+    }
+    Error* getNextFileEntryError = NULL;
+    Entry* currentEntry = getNextFileEntry(fileScanner,&getNextFileEntryError);
+    while(currentEntry != NULL){
+        if(getNextFileEntryError != NULL){
+            createError(error,functionName,"Error during the retrieval of the file's entry",NULL,getNextFileEntryError);
+            return NULL;
+        }
+        Error* isEntryInCachedHashMapError = NULL;
+        bool isInCachedHashMap = isEntryInCachedHashMap(cachedHashMap,currentEntry,&isEntryInCachedHashMapError);
+        if(isEntryInCachedHashMapError != NULL){
+            createError(error,functionName,"Error during the verification of the presence of the entry in the hashmap",NULL,isEntryInCachedHashMapError);
+            return NULL;
+        }
+        if(!isInCachedHashMap){
+            return currentEntry;
+        }
+        currentEntry = getNextFileEntry(fileScanner,&getNextFileEntryError);
+    }
+    return NULL;
+}
+
+void printAllFileTableEntry(char* fileName,char* table,CachedHashMap* cachedHashMap,Error** error){
+    char* functionName = "persistence.printAllFileTableEntry";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return;
+    }
+    Error* getFileScannerError = NULL;
+    FileScanner* fileScanner = getFileScanner(fileName,&getFileScannerError);
+    if(getFileScannerError != NULL){
+        createError(error,functionName,"getFileScannerError",NULL,getFileScannerError);
+        return;
+    }
+    Error* getNextFileTableEntryError = NULL;
+    Entry* current = getNextFileTableEntry(fileScanner,table,cachedHashMap,&getNextFileTableEntryError);
+    while(current != NULL){
+        if(getNextFileTableEntryError != NULL){
+            createError(error,functionName,"getNextFileTableEntryError",NULL,getNextFileTableEntryError);
+            return;
+        }
+        printEntry(current);
+        current = getNextFileTableEntry(fileScanner,table,cachedHashMap,&getNextFileTableEntryError);
+    }
+}
+
 Entry* searchEntryInFile(char* filename,char* table, int id,Error** error){
     char* functionName = "persistence.searchEntryInFile";
     if (*error != NULL){

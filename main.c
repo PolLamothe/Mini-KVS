@@ -1,6 +1,7 @@
 #include "hashage.h"
 #include "error.h"
 #include <stdlib.h>
+#include <time.h>
 #include "input.h"
 #include "persistence.h"
 #include "hashage.h"
@@ -34,6 +35,7 @@ int main(){
             printErrorStack(userActionError);
             return -1;
         }
+        clock_t begin = clock();
         if(userAction->type == INSERT){
             Error* insertionError = NULL;
             insertEntry(name,userAction->entry,&insertionError);
@@ -75,7 +77,16 @@ int main(){
                     printEntry(fileResult);
                 }
             }
+        }else if(userAction->type == SHOW){
+            printCachedTable(hashmap,userAction->entry->table);
+            Error* printAllFileTableEntryError = NULL;
+            printAllFileTableEntry(name,userAction->entry->table,hashmap,&printAllFileTableEntryError);
+            if(printAllFileTableEntryError != NULL){
+                printError(printAllFileTableEntryError);
+            }
         }
+        clock_t end = clock();
+        printf( "Request executed in %f ms\n", (float)(end - begin) / CLOCKS_PER_SEC * 1000);
         free(userInput);
     }
     return 0;

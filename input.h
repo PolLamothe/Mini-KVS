@@ -4,7 +4,7 @@
 #include "error.h"
 #include "hashage.h"
 
-typedef enum ActionType {INSERT, FIND} ActionType;
+typedef enum ActionType {INSERT, FIND, SHOW} ActionType;
 
 typedef struct UserAction{
     ActionType type;

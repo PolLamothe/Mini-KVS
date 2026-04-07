@@ -58,6 +58,10 @@ void deleteCachedEntryFromHashMap(CachedEntry* cachedEntry,Error** error);
 
 CachedHashMap** getHashMapCachedEntryPointer(HashMap* hashMap,Entry* entry,Error** error);
 
+bool isEntryInCachedHashMap(CachedHashMap* cachedHashMap,Entry* entry,Error** error);
+
+void printCachedTable(CachedHashMap* cachedHashMap,char* table);
+
 unsigned long hash(char *table, int id, int capacity);
 
 void verifyEntryForInsert(Entry* entry,Error** error);

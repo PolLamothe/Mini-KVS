@@ -453,6 +453,44 @@ unsigned long hash(char *table, int id, int capacity) {
     return hash % capacity;
 }
 
+bool isEntryInCachedHashMap(CachedHashMap* cachedHashMap,Entry* entry,Error** error){
+    char* functionName = "hashage.isEntryInCachedHashMap";
+    if (*error != NULL){
+        createError(error,functionName,"Error must be null",NULL,NULL);
+        return false;
+    }
+    if(cachedHashMap == NULL){
+        createError(error,functionName,"CachedHashMap cannot be null",NULL,NULL);
+        return false;
+    }
+    if(entry == NULL){
+        createError(error,functionName,"Entry cannot be null",NULL,NULL);
+        return false;
+    }
+    unsigned long index = hash(entry->table, entry->id, cachedHashMap->hashMap->dataSize);
+    CachedEntry* currentEntry = cachedHashMap->hashMap->data[index];
+    while(currentEntry != NULL){
+        if(currentEntry->entry->id == entry->id){
+            if(strcmp(currentEntry->entry->table,entry->table) == 0){
+                return true;
+            }
+        }
+        currentEntry = currentEntry->next;
+    };
+    return false;
+}
+
+void printCachedTable(CachedHashMap* cachedHashMap,char* table){
+    CachedEntry* current = cachedHashMap->firstCached;
+    while(current != NULL){
+        if(strcmp(current->entry->table,table) == 0){
+            printEntry(current->entry);
+        }
+        CachedEntry* save = current;
+        current = current->next;
+    }
+}
+
 void addEntryInHashMap(HashMap* hashmap,CachedEntry* entry,Error** error){
     char* functionName = "hashage.addEntryInHashMap";
     if (*error != NULL){

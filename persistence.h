@@ -15,6 +15,10 @@ void closeFileScanner(FileScanner* fileScanner,Error** error);
 
 Entry* getNextFileEntry(FileScanner* fileScanner,Error** error);
 
+Entry* getNextFileTableEntry(FileScanner* fileScanner,char* table,CachedHashMap* chachedHashMap,Error** error);
+
+void printAllFileTableEntry(char* fileName,char* table,CachedHashMap* cachedHashMap,Error** error);
+
 FILE* readHashMapFile(char* name);
 
 FILE* writeHashMapFile(char* name);
